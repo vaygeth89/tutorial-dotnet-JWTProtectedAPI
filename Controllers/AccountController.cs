@@ -38,64 +38,97 @@ namespace JWTProtectedAPI.Controllers
         [Route("sign-up")]
         public async Task<ActionResult> SignUp(SignUpData signUpData)
         {
-            //Todo add your business validation here
-            //! You may want to add try/catch block to hanlde failed scenarios
-            IdentityUser user = new IdentityUser()
+
+            try
             {
-                Email = signUpData.Email,
-                UserName = signUpData.Username,
-            };
-            IdentityResult identityResult = await _userManager.CreateAsync(user, signUpData.Password);
-            if (identityResult.Succeeded)
-            {
-                string JWTToken = GenerateJWTToken(user);
-                return Ok(new
+                //Todo add your business validation here
+                //! You may want to edit catched exceptions block to handle failed scenarios
+                IdentityUser user = new IdentityUser()
                 {
-                    Token = JWTToken
+                    Email = signUpData.Email,
+                    UserName = signUpData.Username,
+                };
+                IdentityResult identityResult = await _userManager.CreateAsync(user, signUpData.Password);
+                if (identityResult.Succeeded)
+                {
+                    string JWTToken = GenerateJWTToken(user);
+                    return Ok(new
+                    {
+                        Token = JWTToken
+                    });
+                }
+                return BadRequest(new
+                {
+                    Message = identityResult.Errors
                 });
             }
-            return BadRequest(new {
-                Message = "Invalid data or weak password"
-            });
+            catch (System.Exception error)
+            {
+                return BadRequest(new
+                {
+                    message = error.Message
+                });
+            }
         }
 
         [HttpPost]
         [Route("sign-in")]
         public async Task<ActionResult> SignIn(SignInData signInData)
         {
-            //Todo add your business validation here
-            //! You may want to add try/catch block to hanlde failed scenarios
-            IdentityUser user = await ValidateUserCredentials(signInData);
-            if(user == null){
-                return BadRequest(new {
-                    Message = "Invalid Credentials or User Doesn't not exist"
+
+            try
+            {
+                //Todo add your business validation here
+                //! You may want to edit catched exceptions block to handle failed scenarios
+                IdentityUser user = await ValidateUserCredentials(signInData);
+                if (user == null)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Invalid Credentials or User Doesn't not exist"
+                    });
+                }
+                string JWTToken = GenerateJWTToken(user);
+                return Ok(new
+                {
+                    Token = JWTToken
                 });
             }
-            string JWTToken = GenerateJWTToken(user);
-            return Ok(new
+            catch (System.Exception error)
             {
-                Token = JWTToken
-            });
+                return BadRequest(new
+                {
+                    message = error.Message
+                });
+            }
         }
         [HttpGet]
-        // [Authorize]
+        //We add this annotation to tell the framework this is service/route requires Authorization Claims i.e JWT
+        [Authorize]
         [Route("my-profile")]
-        public async Task<ActionResult<IdentityUser>> GetMyProfile()
-        // public async Task<ActionResult<UserProfile>> GetMyProfile()
+        public async Task<ActionResult<UserProfile>> GetMyProfile()
         {
-            //Todo add your business validation here
-            //! You may want to add try/catch block to hanlde failed scenarios
-            List<IdentityUser> users = await _userManager.Users.ToListAsync();
-            return Ok(users.First());
-
-            string userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            IdentityUser user = await _appDbContext.Users.Where(e => e.Email == userEmail).FirstOrDefaultAsync();
-            return Ok(new UserProfile()
+            try
             {
-                Email = user.Email,
-                Username = user.UserName,
-                PhoneNumber = user.PhoneNumber
-            });
+                //Todo add your business validation here
+                //! You may want to edit catched exceptions block to handle failed scenarios
+                string userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                IdentityUser user = await _userManager.FindByEmailAsync(userEmail);
+
+                return Ok(new UserProfile()
+                {
+                    Email = user.Email,
+                    Username = user.UserName,
+                    PhoneNumber = user.PhoneNumber
+                });
+            }
+            catch (System.Exception error)
+            {
+                return BadRequest(new
+                {
+                    message = error.Message
+                });
+            }
         }
 
         private async Task<IdentityUser> ValidateUserCredentials(SignInData signInData)

@@ -1,21 +1,15 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using JWTProtectedAPI.Models;
 using JWTProtectedAPI.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace JWTProtectedAPI
@@ -29,14 +23,17 @@ namespace JWTProtectedAPI
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+
             services.AddDbContext<AppDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlServerDb")));
             services.AddIdentity<IdentityUser, IdentityRole>(options =>
             {
+                //! Change your security Policy here to suits your policy
                 options.Password.RequireUppercase = false;
+                options.Password.RequireDigit = false;
+                //! tutorial purposes im allowed users to sign in without their email confirmation
                 options.SignIn.RequireConfirmedEmail = false;
             }).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
@@ -45,7 +42,9 @@ namespace JWTProtectedAPI
 
         private void setUpBearerJwtAuth(IServiceCollection services)
         {
+            //Fetch JWT configuration from appsettings.json
             var jwtSection = Configuration.GetSection("jwtBearerTokenSettings");
+            //Parse jwtSection from appsettings.json into Concrete Class "JWTBearerTokenSettings"
             services.Configure<JWTBearerTokenSettings>(jwtSection);
             var jwtBearerTokenSettings = jwtSection.Get<JWTBearerTokenSettings>();
             var key = Encoding.ASCII.GetBytes(jwtBearerTokenSettings.SecretKey);
@@ -82,11 +81,12 @@ namespace JWTProtectedAPI
                 app.UseDeveloperExceptionPage();
             }
 
-            // app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
 
             app.UseRouting();
 
-            app.UseAuthorization();
+            //Make sure to add these middlewares
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
